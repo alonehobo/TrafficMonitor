@@ -54,11 +54,13 @@ void IDrawCommon::DrawLine(int x1, int y1, int x2, int y2, unsigned long color, 
 {
     CPoint start_point(x1, y1);
     CPoint end_point(x2, y2);
-    DrawLine(start_point, end_point, color, alpha);
+    DrawLine(start_point, end_point, color, alpha, width, dot_line);
 }
 
 void* IDrawCommon::GetHDC()
 {
     CDC* pDC = GetDC();
+    if (pDC == nullptr)
+        return nullptr;
     return pDC->GetSafeHdc();
 }

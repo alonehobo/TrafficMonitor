@@ -743,9 +743,9 @@ public:
 private:
     struct Cache
     {
-        Microsoft::WRL::ComPtr<ID2D1Bitmap> m_cache;
-        std::chrono::steady_clock::time_point m_init_timestamp;
-        CacheInitializer m_cache_initializer;
+        Microsoft::WRL::ComPtr<ID2D1Bitmap> m_cache{};
+        std::chrono::steady_clock::time_point m_init_timestamp{std::chrono::steady_clock::now()};
+        CacheInitializer m_cache_initializer{ResourceBitmapCreator<ResType>::Create};
         void Update(Microsoft::WRL::ComPtr<ID2D1RenderTarget> pRT, ResType res) {
             m_cache = m_cache_initializer(pRT, res);
             m_init_timestamp = std::chrono::steady_clock::now();
@@ -854,7 +854,11 @@ public:
         else
         {
             AddResource(res);
-            return m_sp_data->m_cache_map[res].m_cache;
+            //创建失败时不向缓存中插入空项，直接返回空指针，由调用者自行处理
+            auto new_it = m_sp_data->m_cache_map.find(res);
+            if (new_it != m_sp_data->m_cache_map.end())
+                return new_it->second.m_cache;
+            return nullptr;
         }
     }
 
@@ -1010,11 +1014,9 @@ public:
     // 绘制矩形边框。如果dot_line为true，则为虚线
     void DrawRectOutLine(CRect rect, COLORREF color, int width = 1, bool dot_line = false, BYTE alpha = 255, int radius = 0) override;
     // 使用当前画笔画线
-    void DrawLine(CPoint start_point, CPoint end_point, COLORREF color, BYTE alpha = 255) override;
+    void DrawLine(CPoint start_point, CPoint end_point, COLORREF color, BYTE alpha = 255, int width = 1, bool dot_line = false) override;
     void SetTextColor(const COLORREF color, BYTE alpha = 255) override;
     // 绘制一个位图
-    // （注意：当stretch_mode设置为StretchMode::FILL（填充）时，会设置绘图剪辑区域，如果之后需要绘制其他图形，
-    // 需要重新设置绘图剪辑区域，否则图片外的区域会无法绘制）
     void DrawBitmap(HBITMAP hbitmap, CPoint start_point, CSize size, StretchMode stretch_mode = StretchMode::STRETCH, BYTE alpha = 255) override;
     void DrawIcon(HICON hIcon, CPoint start_point, CSize size) override;
     virtual CDC* GetDC() override;

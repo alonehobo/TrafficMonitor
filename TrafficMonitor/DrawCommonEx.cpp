@@ -33,9 +33,16 @@ void CDrawCommonEx::SetFont(CFont * pFont)
 
 void CDrawCommonEx::DrawImage(Gdiplus::Image* pImage, CPoint start_point, CSize size, StretchMode stretch_mode)
 {
+    if (pImage == nullptr || pImage->GetWidth() == 0 || pImage->GetHeight() == 0)
+        return;
+    auto gdiplus_states = m_pGraphics->Save();
     m_pGraphics->SetInterpolationMode(Gdiplus::InterpolationMode::InterpolationModeHighQuality);
+    //FILL模式下图片会超出绘制区域，需要将图片裁剪到绘制区域内
+    if (size.cx != 0 && size.cy != 0 && stretch_mode == StretchMode::FILL)
+        m_pGraphics->SetClip(CGdiPlusHelper::CRectToGdiplusRect(CRect(start_point, size)), Gdiplus::CombineModeIntersect);
     DrawCommonHelper::ImageDrawAreaConvert(CSize(pImage->GetWidth(), pImage->GetHeight()), start_point, size, stretch_mode);
     m_pGraphics->DrawImage(pImage, INT(start_point.x), INT(start_point.y), INT(size.cx), INT(size.cy));
+    m_pGraphics->Restore(gdiplus_states);
 }
 
 void CDrawCommonEx::SetBackColor(COLORREF back_color, BYTE alpha)
@@ -135,12 +142,18 @@ void CDrawCommonEx::DrawRectOutLine(CRect rect, COLORREF color, int width, bool 
 
     // 绘制
     auto gdiplus_states = m_pGraphics->Save();
+    // 使像素中心位于0.5处，与GDI的绘制结果保持一致
+    m_pGraphics->SetPixelOffsetMode(Gdiplus::PixelOffsetModeHalf);
+    // 将矩形向内缩进线宽的一半，使边框完全绘制在矩形区域内
+    float half_width = width / 2.0f;
+    rect_gdiplus.X += half_width;
+    rect_gdiplus.Y += half_width;
+    rect_gdiplus.Width -= width;
+    rect_gdiplus.Height -= width;
     if (radius > 0)
     {
         // 使用路径绘制圆角矩形
         Gdiplus::GraphicsPath path;
-        rect_gdiplus.Width -= width;
-        rect_gdiplus.Height -= width;
         CreateRoundRectPath(&path, rect_gdiplus, (float)radius);
         m_pGraphics->SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias); // 启用抗锯齿
         m_pGraphics->DrawPath(&pen, &path);
@@ -153,11 +166,11 @@ void CDrawCommonEx::DrawRectOutLine(CRect rect, COLORREF color, int width, bool 
     m_pGraphics->Restore(gdiplus_states);
 }
 
-void CDrawCommonEx::DrawLine(CPoint start_point, CPoint end_point, COLORREF color, BYTE alpha)
+void CDrawCommonEx::DrawLine(CPoint start_point, CPoint end_point, COLORREF color, BYTE alpha, int width, bool dot_line)
 {
     //使用GDI画线
     CPen aPen, * pOldPen;
-    aPen.CreatePen(PS_SOLID, 1, color);
+    aPen.CreatePen((dot_line ? PS_DOT : PS_SOLID), width, color);
     pOldPen = m_pDC->SelectObject(&aPen);
     CBrush* pOldBrush{ dynamic_cast<CBrush*>(m_pDC->SelectStockObject(NULL_BRUSH)) };
 
@@ -197,9 +210,7 @@ void CDrawCommonEx::GetTextExtent(const wchar_t* lpszString, int& w, int& h)
 void CDrawCommonEx::DrawBitmap(HBITMAP hbitmap, CPoint start_point, CSize size, StretchMode stretch_mode, BYTE alpha)
 {
     Gdiplus::Bitmap bm(hbitmap, NULL);
-    m_pGraphics->SetInterpolationMode(Gdiplus::InterpolationMode::InterpolationModeHighQuality);
-    DrawCommonHelper::ImageDrawAreaConvert(CSize(bm.GetWidth(), bm.GetHeight()), start_point, size, stretch_mode);
-    m_pGraphics->DrawImage(&bm, INT(start_point.x), INT(start_point.y), INT(size.cx), INT(size.cy));
+    DrawImage(&bm, start_point, size, stretch_mode);
 }
 
 void CDrawCommonEx::DrawIcon(HICON hIcon, CPoint start_point, CSize size)

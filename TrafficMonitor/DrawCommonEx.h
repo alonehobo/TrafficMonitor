@@ -23,7 +23,7 @@ public:
     void SetDrawRect(CRect rect) override;
     void FillRect(CRect rect, COLORREF color, BYTE alpha) override;
     void DrawRectOutLine(CRect rect, COLORREF color, int width, bool dot_line, BYTE alpha, int radius = 0) override;
-    void DrawLine(CPoint start_point, CPoint end_point, COLORREF color, BYTE alpha) override;
+    void DrawLine(CPoint start_point, CPoint end_point, COLORREF color, BYTE alpha, int width = 1, bool dot_line = false) override;
     void SetTextColor(const COLORREF color, BYTE alpha) override;
     void DrawBitmap(HBITMAP hbitmap, CPoint start_point, CSize size, StretchMode stretch_mode, BYTE alpha) override;
     void DrawIcon(HICON hIcon, CPoint start_point, CSize size) override;

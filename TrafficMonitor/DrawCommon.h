@@ -46,7 +46,7 @@ public:
     //https://blog.csdn.net/tajon1226/article/details/6589180
     static void GetRegionFromImage(CRgn& rgn, CBitmap& cBitmap, int threshold);
 
-    void DrawLine(CPoint start_point, CPoint end_point, COLORREF color, BYTE alpha = 255) override; //使用当前画笔画线
+    void DrawLine(CPoint start_point, CPoint end_point, COLORREF color, BYTE alpha = 255, int width = 1, bool dot_line = false) override; //使用当前画笔画线
 
     virtual int GetTextWidth(LPCTSTR lpszString) override;
 

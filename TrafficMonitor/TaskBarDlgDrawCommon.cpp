@@ -5,6 +5,7 @@
 #include "TrafficMonitor.h"
 #include "DrawCommon.h"
 #include "WIC.h"
+#include "DrawCommonHelper.h"
 
 #undef min
 
@@ -1406,6 +1407,7 @@ void CTaskBarDlgDrawCommon::ResetClippedStateIfSet()
     if (m_is_clipped)
     {
         m_p_device_context->PopAxisAlignedClip();
+        m_is_clipped = false;
     }
 }
 
@@ -1693,7 +1695,7 @@ void CTaskBarDlgDrawCommon::DrawRectOutLine(CRect rect, COLORREF color, int widt
     }
 }
 
-void CTaskBarDlgDrawCommon::DrawLine(CPoint start_point, CPoint end_point, COLORREF color, BYTE alpha)
+void CTaskBarDlgDrawCommon::DrawLine(CPoint start_point, CPoint end_point, COLORREF color, BYTE alpha, int width, bool dot_line)
 {
     auto d2d1_start_point = Convert(start_point);
     auto d2d1_end_point = Convert(end_point);
@@ -1701,7 +1703,9 @@ void CTaskBarDlgDrawCommon::DrawLine(CPoint start_point, CPoint end_point, COLOR
     m_p_device_context->DrawLine(
         d2d1_start_point,
         d2d1_end_point,
-        m_p_d2d1_device_context_support->GetRawForeSolidColorBruch());
+        m_p_d2d1_device_context_support->GetRawForeSolidColorBruch(),
+        static_cast<float>(width),
+        dot_line ? m_p_window_support->GetRawPsDotLikeStyle() : nullptr);
 }
 
 void CTaskBarDlgDrawCommon::SetTextColor(const COLORREF color, BYTE alpha)
@@ -1722,6 +1726,7 @@ void CTaskBarDlgDrawCommon::DrawBitmap(HBITMAP hbitmap, CPoint start_point, CSiz
     D2D1_RECT_F draw_rect_f;
     if (size.cx == 0 || size.cy == 0)
     {
+        //如果指定的size为0，则使用位图的实际大小绘制
         auto bitmap_size = p_d2d1_bitmap->GetSize();
         draw_rect_f.left = static_cast<float>(start_point.x);
         draw_rect_f.top = static_cast<float>(start_point.y);
@@ -1730,71 +1735,30 @@ void CTaskBarDlgDrawCommon::DrawBitmap(HBITMAP hbitmap, CPoint start_point, CSiz
         m_p_device_context->DrawBitmap(p_d2d1_bitmap.Get(), draw_rect_f, opacity);
         return;
     }
-    switch (stretch_mode)
-    {
-    case StretchMode::STRETCH:
-    {
-        draw_rect_f.left = static_cast<float>(start_point.x);
-        draw_rect_f.top = static_cast<float>(start_point.y);
-        draw_rect_f.right = static_cast<float>(start_point.x + size.cx);
-        draw_rect_f.bottom = static_cast<float>(start_point.y + size.cy);
-        m_p_device_context->DrawBitmap(p_d2d1_bitmap.Get(), draw_rect_f, opacity);
-        return;
-    }
-    case StretchMode::FILL:
-    {
-        auto draw_size = size;
-        SetDrawRect(CRect(start_point, draw_size));
 
-        auto bitmap_size = p_d2d1_bitmap->GetPixelSize();
-        float bitmap_aspect_ratio, draw_rect_acpect_ratio; // 图像的宽高比、绘制大小的宽高比
-        bitmap_aspect_ratio = static_cast<float>(bitmap_size.width) / static_cast<float>(bitmap_size.height);
-        draw_rect_acpect_ratio = static_cast<float>(size.cx) / size.cy;
-        if (bitmap_aspect_ratio > draw_rect_acpect_ratio) // 如果图像的宽高比大于绘制区域的宽高比，则需要裁剪两边的图像
-        {
-            int image_width; // 按比例缩放后的宽度
-            image_width = bitmap_size.width * draw_size.cy / bitmap_size.height;
-            start_point.x -= ((image_width - draw_size.cx) / 2);
-            draw_size.cx = image_width;
-        }
-        else
-        {
-            int image_height; // 按比例缩放后的高度
-            image_height = bitmap_size.height * draw_size.cx / bitmap_size.width;
-            start_point.y -= ((image_height - draw_size.cy) / 2);
-            draw_size.cy = image_height;
-        }
-        ResetClippedStateIfSet();
-        break;
-    }
-    case StretchMode::FIT:
-    {
-        auto draw_size = p_d2d1_bitmap->GetPixelSize();
-        // 图像宽高比
-        float bitmap_aspect_ratio = static_cast<float>(draw_size.width) / static_cast<float>(draw_size.height);
-        float draw_rect_acpect_ratio = static_cast<float>(size.cx) / static_cast<float>(size.cy);
-        if (bitmap_aspect_ratio > draw_rect_acpect_ratio) // 如果图像的宽高比大于绘制区域的宽高比
-        {
-            draw_size.height = draw_size.height * size.cx / draw_size.width;
-            draw_size.width = size.cx;
-            start_point.y += ((size.cy - draw_size.height) / 2);
-        }
-        else
-        {
-            draw_size.width = draw_size.width * size.cy / draw_size.height;
-            draw_size.height = size.cy;
-            start_point.x += ((size.cx - draw_size.width) / 2);
-        }
-        break;
-    }
-    default:
-        break;
-    }
+    auto bitmap_size = p_d2d1_bitmap->GetPixelSize();
+    if (bitmap_size.width == 0 || bitmap_size.height == 0)
+        return;
+    //FILL模式下图片会超出绘制区域，需要将图片裁剪到绘制区域内
+    bool need_clip = (stretch_mode == StretchMode::FILL);
+    CRect clip_rect(start_point, size);
+    DrawCommonHelper::ImageDrawAreaConvert(CSize(bitmap_size.width, bitmap_size.height), start_point, size, stretch_mode);
+
     draw_rect_f.left = static_cast<float>(start_point.x);
     draw_rect_f.top = static_cast<float>(start_point.y);
-    draw_rect_f.right = draw_rect_f.left + size.cx;
-    draw_rect_f.bottom = draw_rect_f.top + size.cy;
-    m_p_device_context->DrawBitmap(p_d2d1_bitmap.Get(), draw_rect_f, opacity);
+    draw_rect_f.right = static_cast<float>(start_point.x + size.cx);
+    draw_rect_f.bottom = static_cast<float>(start_point.y + size.cy);
+    if (need_clip)
+    {
+        //在当前剪辑区域的基础上叠加一层剪辑区域，绘制完成后弹出，不影响之前设置的剪辑区域
+        m_p_device_context->PushAxisAlignedClip(Convert(clip_rect), D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
+        m_p_device_context->DrawBitmap(p_d2d1_bitmap.Get(), draw_rect_f, opacity);
+        m_p_device_context->PopAxisAlignedClip();
+    }
+    else
+    {
+        m_p_device_context->DrawBitmap(p_d2d1_bitmap.Get(), draw_rect_f, opacity);
+    }
 }
 
 void CTaskBarDlgDrawCommon::DrawIcon(HICON hIcon, CPoint start_point, CSize size)

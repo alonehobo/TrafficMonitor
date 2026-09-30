@@ -1498,12 +1498,21 @@ int CTrafficMonitorApp::GetDPI(DPIType type) const
 
 void* CTrafficMonitorApp::GetMainWindowHwnd()
 {
+    if (m_pMainWnd == nullptr)
+        return nullptr;
     return m_pMainWnd->GetSafeHwnd();
 }
 
 void* CTrafficMonitorApp::GetTaskbarWindowHwnd()
 {
-    return CTrafficMonitorDlg::Instance()->GetTaskbarWindow()->GetSafeHwnd();
+    //主窗口还未创建或任务栏窗口未显示时返回空
+    CTrafficMonitorDlg* pMainWnd = CTrafficMonitorDlg::Instance();
+    if (pMainWnd == nullptr)
+        return nullptr;
+    CTaskBarDlg* pTaskbarWnd = pMainWnd->GetTaskbarWindow();
+    if (pTaskbarWnd == nullptr)
+        return nullptr;
+    return pTaskbarWnd->GetSafeHwnd();
 }
 
 const wchar_t* CTrafficMonitorApp::GetStringRes(const wchar_t* key, const wchar_t* section)

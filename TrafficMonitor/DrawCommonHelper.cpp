@@ -98,8 +98,8 @@ void DrawCommonHelper::GetBitmapAlphaPixel(HBITMAP hBitmap, std::set<Point>& poi
     bmpInfo.bmiHeader.biBitCount = 32;
     bmpInfo.bmiHeader.biCompression = BI_RGB;
 
+    //注意：GetDIBits要求位图不能被选入DC中，因此这里不能调用SelectObject
     HDC hdc = CreateCompatibleDC(NULL);
-    SelectObject(hdc, hBitmap);
 
     // 分配内存存储位图像素
     RGBQUAD* pPixels = new RGBQUAD[width * height];
@@ -122,7 +122,7 @@ void DrawCommonHelper::GetBitmapAlphaPixel(HBITMAP hBitmap, std::set<Point>& poi
 
 }
 
-void DrawCommonHelper::FixBitmapTextAlpha(HBITMAP hBitmap, BYTE alpha, std::set<Point> alpha_points)
+void DrawCommonHelper::FixBitmapTextAlpha(HBITMAP hBitmap, BYTE alpha, const std::set<Point>& alpha_points)
 {
     BITMAP bm;
     GetObject(hBitmap, sizeof(BITMAP), &bm);
@@ -139,8 +139,8 @@ void DrawCommonHelper::FixBitmapTextAlpha(HBITMAP hBitmap, BYTE alpha, std::set<
     bmpInfo.bmiHeader.biBitCount = 32;
     bmpInfo.bmiHeader.biCompression = BI_RGB;
 
+    //注意：GetDIBits要求位图不能被选入DC中，因此这里不能调用SelectObject
     HDC hdc = CreateCompatibleDC(NULL);
-    SelectObject(hdc, hBitmap);
 
     // 分配内存存储位图像素
     RGBQUAD* pPixels = new RGBQUAD[width * height];

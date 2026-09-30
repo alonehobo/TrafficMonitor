@@ -23,8 +23,8 @@ public:
     virtual void FillRect(CRect rect, COLORREF color, BYTE alpha = 255) = 0;
     // 绘制矩形边框。如果dot_line为true，则为虚线。radius大于0时为圆角矩形
     virtual void DrawRectOutLine(CRect rect, COLORREF color, int width = 1, bool dot_line = false, BYTE alpha = 255, int radius = 0) = 0;
-    // 使用当前画笔画线
-    virtual void DrawLine(CPoint start_point, CPoint end_point, COLORREF color, BYTE alpha = 255) = 0;
+    // 画线。width为线宽，如果dot_line为true，则为虚线
+    virtual void DrawLine(CPoint start_point, CPoint end_point, COLORREF color, BYTE alpha = 255, int width = 1, bool dot_line = false) = 0;
     // 使用当前画笔画线，以start_point为起点，向上画长度为height的线段
     virtual void DrawLine(CPoint start_point, int height, COLORREF color, BYTE alpha = 255);
     virtual void SetTextColor(const COLORREF color, BYTE alpha = 255) = 0;

@@ -65,8 +65,9 @@ void CDrawCommon::DrawBitmap(CBitmap& bitmap, CPoint start_point, CSize size, St
     CDC memDC;
 
     //获取图像实际大小
-    BITMAP bm;
-    GetObject(bitmap, sizeof(BITMAP), &bm);
+    BITMAP bm{};
+    if (GetObject(bitmap, sizeof(BITMAP), &bm) == 0 || bm.bmWidth == 0 || bm.bmHeight == 0)
+        return;
 
     memDC.CreateCompatibleDC(m_pDC);
     memDC.SelectObject(&bitmap);
@@ -74,9 +75,19 @@ void CDrawCommon::DrawBitmap(CBitmap& bitmap, CPoint start_point, CSize size, St
     m_pDC->SetStretchBltMode(HALFTONE);
     m_pDC->SetBrushOrg(0, 0);
 
+    //FILL模式下图片会超出绘制区域，需要将图片裁剪到绘制区域内，绘制完成后恢复原来的剪辑区域
+    int saved_dc = 0;
+    if (size.cx != 0 && size.cy != 0 && stretch_mode == StretchMode::FILL)
+    {
+        saved_dc = m_pDC->SaveDC();
+        m_pDC->IntersectClipRect(CRect(start_point, size));
+    }
+
     DrawCommonHelper::ImageDrawAreaConvert(CSize(bm.bmWidth, bm.bmHeight), start_point, size, stretch_mode);
 
     m_pDC->StretchBlt(start_point.x, start_point.y, size.cx, size.cy, &memDC, 0, 0, bm.bmWidth, bm.bmHeight, SRCCOPY);
+    if (saved_dc != 0)
+        m_pDC->RestoreDC(saved_dc);
     memDC.DeleteDC();
 }
 
@@ -211,10 +222,10 @@ int CDrawCommon::GetColorBritness(COLORREF color)
     return (GetRValue(color) + GetGValue(color) + GetBValue(color)) / 3;
 }
 
-void CDrawCommon::DrawLine(CPoint start_point, CPoint end_point, COLORREF color, BYTE alpha)
+void CDrawCommon::DrawLine(CPoint start_point, CPoint end_point, COLORREF color, BYTE alpha, int width, bool dot_line)
 {
     CPen aPen, *pOldPen;
-    aPen.CreatePen(PS_SOLID, 1, color);
+    aPen.CreatePen((dot_line ? PS_DOT : PS_SOLID), width, color);
     pOldPen = m_pDC->SelectObject(&aPen);
     CBrush* pOldBrush{dynamic_cast<CBrush*>(m_pDC->SelectStockObject(NULL_BRUSH))};
 

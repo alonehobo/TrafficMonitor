@@ -569,9 +569,11 @@ public:
      * @param   x1 第1个点的x坐标
      * @param   y1 第1个点的y坐标
      * @param   x2 第2个点的x坐标
-     * @param   y2 第2个点的7坐标
+     * @param   y2 第2个点的y坐标
      * @param   color 颜色
-     * @param   alpha 不透明度
+     * @param   width 线宽
+     * @param   dot_line 是否为虚线
+     * @param   alpha 不透明度，0~255
      */
     virtual void DrawLine(int x1, int y1, int x2, int y2, unsigned long color, int width = 1, bool dot_line = false, unsigned char alpha = 255) = 0;
 

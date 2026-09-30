@@ -80,6 +80,6 @@ namespace DrawCommonHelper
 
     //修正位图中文本部分的Alpha通道
     //使用了UpdateLayeredWindow后，使用GDI绘制的文本也会变得透明，此函数会遍历bitmap中alpha值为0，但是不在alpha_points中的像素，将其修正为正确的alpha值
-    void FixBitmapTextAlpha(HBITMAP hBitmap, BYTE alpha, std::set<Point> alpha_points);
+    void FixBitmapTextAlpha(HBITMAP hBitmap, BYTE alpha, const std::set<Point>& alpha_points);
 };
 
